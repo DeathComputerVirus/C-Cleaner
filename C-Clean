@@ -1,0 +1,66 @@
+@echo off
+cls
+
+set /p target_folder=Enter the target folder path: 
+cls
+
+echo Removing empty files...
+for /f "delims=" %%i in ('dir /b "%target_folder%\*"') do (
+  if %%~zi equ 0 (
+    echo Deleting empty file "%%i"...
+    del /f /q "%target_folder%\%%i"
+  ) else if "%%~xi"==".txt" (
+    findstr "^" "%target_folder%\%%i" >nul
+    if errorlevel 1 (
+      echo Deleting empty text file "%%i"...
+      del /f /q "%target_folder%\%%i"
+    )
+  )
+)
+
+echo Removing incomplete files...
+for /f "delims=" %%i in ('dir /b "%target_folder%\*"') do (
+  set "filename=%%i"
+  set "filesize=%%~zi"
+  set "filecrc32=0"
+  setlocal enabledelayedexpansion
+  for /f "usebackq delims=" %%a in (`CertUtil -hashfile "%target_folder%\%%i" MD5 ^| findstr /v "hash"`) do (
+    set "filecrc32=!filecrc32!%%a"
+  )
+  set "filecrc32=!filecrc32:~-8!"
+  if !filesize! lss 1024 (
+    echo Deleting incomplete file "%%i"...
+    del /f /q "%target_folder%\%%i"
+  ) else (
+    if !filecrc32! equ 00000000 (
+      echo Deleting incomplete file "%%i"...
+      del /f /q "%target_folder%\%%i"
+    )
+  )
+  endlocal
+)
+
+echo Removing all empty files with any extension...
+for /f "delims=" %%i in ('dir /b "%target_folder%\*"') do (
+  if %%~zi equ 0 (
+    echo Deleting empty file "%%i"...
+    del /f /q "%target_folder%\%%i"
+  )
+)
+
+echo Removing all empty text files...
+for /f "delims=" %%i in ('dir /b "%target_folder%\*.txt"') do (
+  findstr "^" "%target_folder%\%%i" >nul
+  if errorlevel 1 (
+    echo Deleting empty text file "%%i"...
+    del /f /q "%target_folder%\%%i"
+  )
+)
+
+for %%i in (log tmp bak) do (
+  echo Deleting * .%%i files...
+  del /s /f /q "%target_folder%\*.%%i"
+)
+cls
+echo Finished cleaning!
+pause
